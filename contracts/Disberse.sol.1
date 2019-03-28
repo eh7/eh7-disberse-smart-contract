@@ -1,0 +1,239 @@
+pragma solidity ^0.5.0;
+
+contract Owned {
+
+    address public owner;
+
+     constructor() public {
+        owner = msg.sender;
+    }
+
+    modifier onlyOwner {
+        if (msg.sender != owner) revert();
+        _;
+    }
+
+    function transferOwnership(address newOwner) onlyOwner public {
+        owner = newOwner;
+    }
+
+    function kill() onlyOwner public {
+        selfdestruct(msg.sender);
+//        suicide(owner);
+    }
+}
+
+contract Disberse is Owned {
+
+  event Status(uint _code, bytes32 _orgHash);
+//  event Check(address _address);
+  event Check(bool check);
+
+  mapping (bytes32 => address) public orgOwner;
+  mapping (bytes32 => address[]) public orgSignerAdresses;
+  mapping (bytes32 => uint) public orgSignerThreshold;
+
+  struct balance {
+    mapping (uint => uint256) token_type;
+  }
+
+  uint8 public decimals = 2;
+
+  mapping (uint => string) public token_type;
+  uint public token_type_count = 0;
+
+  mapping (address => balance) balances;
+
+  mapping (uint => bytes8) public ref;
+  mapping (uint => string) public note;
+  mapping (uint => address) public address_from;
+  mapping (uint => uint) public tx_token_type;
+
+  uint public note_count = 0;
+
+  // Note that owners_ array must be strictly increasing, 
+  // in order to prevent duplicates
+  constructor() public {
+//    owner = msg.sender;
+    emit Status(1, bytes32(0));
+  }
+
+  function newOrg(bytes32 _orgHash, uint _threshold, address[] memory _owners) public returns (bool) { //returns (bytes32, address, uint, address[] memory) {
+    require( 
+      _owners.length <= 10 && 
+      _threshold <= _owners.length && 
+      _threshold > 0
+    );
+    if(orgOwner[_orgHash] == address(0)){
+      orgOwner[_orgHash] = msg.sender;
+      orgSignerAdresses[_orgHash] = _owners;
+      orgSignerThreshold[_orgHash] = uint(_threshold);
+      emit Status(2, _orgHash);
+      return true;
+    } else {
+      if(msg.sender == orgOwner[_orgHash]) {
+        orgSignerAdresses[_orgHash] = _owners;
+        orgSignerThreshold[_orgHash] = uint(_threshold);
+        emit Status(3, _orgHash);
+        return true;
+      } else { return false; }
+    }
+
+  }
+
+  function verify(bytes32 _orgHash, uint8[] memory sigV, bytes32[] memory sigR, bytes32[] memory sigS, bytes32[] memory _h, address[] memory signers) public returns (bytes32 sent) {
+    emit Status(5, _orgHash);
+    return _h[0];
+  }
+
+  function verifyWithPrefixAndSend(bytes32 _orgHash, uint8[] memory sigV, bytes32[] memory sigR, bytes32[] memory sigS, bytes32[] memory _h, address[] memory signers, uint value, bytes memory data, bytes8 projectName) public returns (bool sent) {
+
+    bool status = true;
+    bytes memory prefix = "\x19Ethereum Signed Message:\n32";
+    for(uint8 i=0; i<orgSignerThreshold[_orgHash]; i++) {
+      bytes32 h = keccak256(abi.encodePacked(prefix, _h[0]));
+      address addr = ecrecover(h, sigV[0], sigR[0], sigS[0]);
+      if(addr == signers[i])
+        status = false;
+    }
+    emit Status(4, _orgHash);
+    emit Check(status);
+
+    return status;
+
+/*
+    bool status = true;
+    deposit(200, projectName, 0);
+//    dtc.depositToAddress(200, projectName, 0, msg.sender);
+//    depositToAddress(200, projectName, 0, msg.sender);
+    emit Status(4, _orgHash);
+//    emit Check(dtcAddress);
+
+//    require(signers.length >= orgSignerThreshold[_orgHash]);
+    bytes memory prefix = "\x19Ethereum Signed Message:\n32";
+    for(uint8 i=0; i<orgSignerThreshold[_orgHash]; i++) {
+      bytes32 h = keccak256(abi.encodePacked(prefix, _h[i]));
+      address addr = ecrecover(h, sigV[i], sigR[i], sigS[i]);
+      if(addr != signers[i])
+        status = false;
+    }
+    require(status);
+
+    // try to send contract function call
+//    if (!destination.call.value(value)(data)) {throw;}
+
+    return status;
+*/
+  }
+
+
+//  event NewType(address indexed _from, string token_type, uint token_type_count, uint8 status);
+//  event Deposit(address indexed _to, uint _value, bytes8 project_ref, uint8 status, uint token_type);
+  event Deposit(address _to, uint _value, bytes8 project_ref, uint8 status, uint token_type);
+  event Transfered(address indexed _from, address indexed _to, uint _value, bytes8 project_ref, uint8 status, uint token_type);
+  event Redeemed(address indexed _from, uint _value, bytes8 project_ref, uint8 status, uint token_type);
+//  event Request(address indexed _from, address indexed _to, uint _value, bytes8 project_ref, uint8 status, uint token_type);
+
+  function transfer(address _to, uint _value, bytes8 project, uint token_type_in) public returns (bool success) {
+    if(balances[msg.sender].token_type[token_type_in] >= _value 
+    && _value > 0
+    && balances[_to].token_type[token_type_in] + _value > balances[_to].token_type[token_type_in] ) {
+      balances[msg.sender].token_type[token_type_in] -= _value;
+      balances[_to].token_type[token_type_in] += _value; 
+      ref[note_count] = project;
+      note[note_count] = "transfer";
+      address_from[note_count] = msg.sender;
+      note_count++;
+      emit Transfered(msg.sender, _to, _value, project, 0, token_type_in);
+      return true;
+    } else {
+      emit Transfered(msg.sender, _to, _value, project, 1, token_type_in);
+      return false;
+    }
+  }
+
+  function depositToAddress(uint _amount, bytes8 _ref, uint token_type_in, address accountAddress) internal returns (bool success) {
+    balances[accountAddress].token_type[token_type_in] += _amount;
+    ref[note_count] = _ref;
+    note[note_count] = "deposit";
+    address_from[note_count] = accountAddress;
+    tx_token_type[note_count] = token_type_in;
+    note_count++;
+    emit Deposit(accountAddress, _amount, _ref, 1, token_type_in);
+    return true;
+  }
+
+  function deposit(uint _amount, bytes8 _ref, uint token_type_in) public returns (bool success) {
+    balances[msg.sender].token_type[token_type_in] += _amount;
+    ref[note_count] = _ref;
+    note[note_count] = "deposit";
+    address_from[note_count] = msg.sender;
+    tx_token_type[note_count] = token_type_in;
+    note_count++;
+    emit Deposit(msg.sender, _amount, _ref, 0, token_type_in);
+    return true;
+  }
+
+/*
+  function request(address _to, uint _amount, bytes8 _ref, uint token_type_in) public returns (bool success) {
+    ref[note_count] = _ref;
+    note[note_count] = "request";
+    address_from[note_count] = msg.sender;
+    tx_token_type[note_count] = token_type_in;
+    emit Request(msg.sender, _to, _amount, _ref, 0, token_type_in);
+    note_count++;
+    return true;
+  }
+*/
+
+  function redeem(uint _amount, bytes8 _ref, uint token_type_in) public returns (bool success) {
+    if(balances[msg.sender].token_type[token_type_in] >= _amount 
+    && _amount > 0
+    && balances[msg.sender].token_type[token_type_in] + _amount > balances[msg.sender].token_type[token_type_in] ) {
+      balances[msg.sender].token_type[token_type_in] -= _amount;
+      ref[note_count] = _ref;
+      note[note_count] = "redeem";
+      address_from[note_count] = msg.sender;
+      tx_token_type[note_count] = token_type_in;
+      emit Redeemed(msg.sender, _amount, _ref, 0, token_type_in);
+      note_count++;
+      return true;
+    }
+    else
+      emit Redeemed(msg.sender, _amount, _ref, 1, token_type_in);
+      return false;
+  }
+/*
+  function get_type(uint token_type_count_in) returns (bool success) {
+    for (uint i = 0; i < token_type.length; i++) {
+    }
+  }
+*/
+/*
+  function new_token_type(string memory token_type_in) public returns (bool success) {
+    if(msg.sender != owner) return false;
+    token_type[token_type_count] = token_type_in;
+    token_type_count++;
+    emit NewType(msg.sender, token_type_in, token_type_count, 0);
+    return true;
+  }
+*/
+
+  function getBalances(address account_address) public view returns (uint256 GBP, uint256 USD, uint256 EUR, uint256 AUD) {
+    if(msg.sender == owner || msg.sender == account_address) {
+      return (balances[account_address].token_type[0],
+        balances[account_address].token_type[1],
+        balances[account_address].token_type[2],
+        balances[account_address].token_type[3]
+      );
+    } else
+      return (0,0,0,0);
+  }
+
+  function getBalance(address account_address, uint token_type_in) public view returns (uint256 return_balance) {
+    if(msg.sender == owner || msg.sender == account_address) return balances[account_address].token_type[token_type_in];
+    return 0;
+  }
+
+  function () payable external {}
+}
