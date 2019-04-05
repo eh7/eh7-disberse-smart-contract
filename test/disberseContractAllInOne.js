@@ -263,4 +263,22 @@ console.log("redeem 10 user 1: " + results.logs[0].event)
     console.log(orgAddress)
   })
 
+  it("test function getSingersAndThreshold", async() => {
+    // function getSingersAndThreshold(bytes32 _orgHash) public view returns (address[] memory signers, uint threshold)
+
+    instanceDisberse = await Disberse.new()
+
+    const sortedAccounts = accounts.sort(hexSortAsc)
+
+    var org = "Org Name Ltd 3"
+    var orgHash = web3.utils.keccak256(org)
+    var orgWallet = wallet.generate()
+    var orgAddress = orgWallet.getAddressString()
+    var result = await instanceDisberse.editOrg(orgHash, orgAddress, 2, sortedAccounts)
+
+    var result = await instanceDisberse.getSingersAndThreshold(orgHash)
+    console.log(result)
+
+  })
+
 })

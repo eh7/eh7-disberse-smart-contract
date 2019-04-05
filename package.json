@@ -24,13 +24,16 @@
   },
   "homepage": "https://github.com/christianlundkvist/simple-multisig#readme",
   "devDependencies": {
-    "eth-lightwallet": "*",
-    "bluebird": "*",
-    "left-pad": "*",
-    "solidity-sha3": "*"
+    "bluebird": "^3.5.3",
+    "left-pad": "*"
   },
   "dependencies": {
-    "eth-sig-util": "^2.1.0",
-    "ethereumjs-utils": "^5.2.5"
+    "bip39": "^2.5.0",
+    "ethereumjs-tx": "^1.3.7",
+    "ethereumjs-util": "^6.1.0",
+    "ethereumjs-wallet": "^0.6.3",
+    "lodash": "^4.17.11",
+    "truffle-test-utils": "^0.1.0",
+    "web3": "^1.0.0-beta.50"
   }
 }
