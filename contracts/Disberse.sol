@@ -24,9 +24,10 @@ contract Owned {
 
 contract Disberse is Owned {
 
-//  event Int(uint _number);
+  event Int(uint _number);
 //  event Bytes32(bytes32 _h);
-//  event Addr(address _address, bool status);
+  event Addr(address _address, bool status);
+  event Addrs(address _address0, address _address1);
   event Status(uint _code, bytes32 _orgHash);
 
   event Deposit(address _to, uint _value, bytes8 project_ref, uint8 status, uint token_type);
@@ -67,23 +68,75 @@ contract Disberse is Owned {
   constructor() public {
   }
 
-
+/*
   function initOrgSigner(bytes32 _orgHash, address[] memory _owners) internal { 
     address lastAdd = address(0);
     for (uint i=0; i<_owners.length; i++) {
-      require(_owners[i] > lastAdd);
+//      require(_owners[i] > lastAdd);
       orgSignerCheck[_orgHash][_owners[i]] = true;
       lastAdd =  _owners[i];
     }
     orgSigners[_orgHash] = _owners;
   }
+*/
 
-  function editOrg(bytes32 _orgHash, address _orgAddress, uint _threshold, address[] memory _owners) public returns (bool) { //returns (bytes32, address, uint, address[] memory) {
+  function updateOrg(bytes32 _orgHash, address _orgAddress, uint _threshold, address[] memory _owners) public returns (bool) { //returns (bytes32, address, uint, address[] memory) {
+    require(orgSigners[_orgHash].length > 0);
     require( 
+      _threshold > 0 &&
       _owners.length <= 10 && 
-      _threshold <= _owners.length && 
-      _threshold > 0
+      _threshold <= _owners.length 
     );
+    for(uint i=0; i<orgSigners[_orgHash].length; i++) { 
+      orgSignerCheck[_orgHash][orgSigners[_orgHash][i]] = false;
+    }
+    address lastAdd = address(0);
+    for (uint i=0; i<_owners.length; i++) {
+//      emit Addrs(_owners[i], lastAdd);
+      require(_owners[i] > lastAdd);
+      orgSignerCheck[_orgHash][_owners[i]] = true;
+      lastAdd =  _owners[i];
+    }
+    orgSigners[_orgHash] = _owners;
+    orgOwner[_orgHash] = msg.sender;
+    orgAddress[_orgHash] = _orgAddress;
+    orgSignerThreshold[_orgHash] = uint(_threshold);
+    emit Status(100, _orgHash);
+  }
+
+  function newOrg(bytes32 _orgHash, address _orgAddress, uint _threshold, address[] memory _owners) public returns (bool) { //returns (bytes32, address, uint, address[] memory) {
+    require(orgSigners[_orgHash].length == 0);
+    require( 
+      _threshold > 0 &&
+      _owners.length <= 10 && 
+      _threshold <= _owners.length 
+    );
+//    emit Status(98, _orgHash);
+    address lastAdd = address(0);
+    for (uint i=0; i<_owners.length; i++) {
+      require(_owners[i] > lastAdd);
+      orgSignerCheck[_orgHash][_owners[i]] = true;
+//emit Addr(_owners[i], orgSignerCheck[_orgHash][_owners[i]]);
+      lastAdd =  _owners[i];
+    }
+    orgSigners[_orgHash] = _owners;
+    orgOwner[_orgHash] = msg.sender;
+    orgAddress[_orgHash] = _orgAddress;
+    orgSignerThreshold[_orgHash] = uint(_threshold);
+    emit Status(99, _orgHash);
+    
+    return true;
+  }
+
+/*
+  function editOrg(bytes32 _orgHash, address _orgAddress, uint _threshold, address[] memory _owners) public returns (bool) { //returns (bytes32, address, uint, address[] memory) {
+    emit Status(67, _orgHash);
+    require( 
+      _threshold > 0 &&
+      _owners.length <= 10 && 
+      _threshold <= _owners.length 
+    );
+    emit Status(68, _orgHash);
     if(orgOwner[_orgHash] == address(0)){
       initOrgSigner(_orgHash, _owners);    
       orgOwner[_orgHash] = msg.sender;
@@ -100,6 +153,7 @@ contract Disberse is Owned {
       } else { return false; }
     }
   }
+*/
 
   function getSingersAndThreshold(bytes32 _orgHash) public view returns (address[] memory signers, uint threshold) {
     return (orgSigners[_orgHash], orgSignerThreshold[_orgHash]);
@@ -108,6 +162,7 @@ contract Disberse is Owned {
   function verifyAndSend(bytes32 _orgHash, uint8[] memory sigV, bytes32[] memory sigR, bytes32[] memory sigS, bytes32[] memory _h, address[] memory signers, uint _value, uint _type, bytes8 projectName, address _to, uint _txType) public  {
 
     emit Status(88, _orgHash);
+//    emit Status(sigR.length, _orgHash);
 
     require(sigR.length == orgSignerThreshold[_orgHash], "threshold not correct");
     require(sigR.length == sigS.length && sigR.length == sigV.length, "sig data not complete");
@@ -116,6 +171,8 @@ contract Disberse is Owned {
 
     for(uint8 i=0; i<_h.length; i++) {
       address addr = ecrecover(_h[i], sigV[i], sigR[i], sigS[i]);
+//      emit Addr(addr,true);
+//      require(addr > lastAdd, "verifyAndSend - failed checks ");
       require(addr > lastAdd && orgSignerCheck[_orgHash][addr], "verifyAndSend - failed checks ");
       lastAdd = addr;
     }

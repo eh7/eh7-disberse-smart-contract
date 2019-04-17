@@ -275,10 +275,21 @@ console.log("redeem 10 user 1: " + results.logs[0].event)
     var orgWallet = wallet.generate()
     var orgAddress = orgWallet.getAddressString()
     var result = await instanceDisberse.editOrg(orgHash, orgAddress, 2, sortedAccounts)
+    console.log(result.receipt.gasUsed)
+    var result = await instanceDisberse.editOrg(orgHash, orgAddress, 2, sortedAccounts)
+    console.log(result.receipt.gasUsed)
+    console.log(orgHash, orgAddress, 2, sortedAccounts)
 
     var result = await instanceDisberse.getSingersAndThreshold(orgHash)
-    console.log(result)
+//    console.log(result)
 
+/*
+    var result = await instanceDisberse.newOrg(orgHash, orgAddress, 2, sortedAccounts)
+    console.log(result.logs[0].event)
+    console.log(result.logs[0].args)
+    console.log(result)
+//    console.log(orgHash, orgAddress, 2, sortedAccounts)
+*/
   })
 
 })
